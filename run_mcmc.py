@@ -264,7 +264,7 @@ def main():
         for source_kind in ("real", "reconstructed"):
             target_a, target_e = make_target(
                 data[f"source_{source_kind}"][index],
-                data[f"residual_{source_kind}"][index],
+                data[f"residual_real"][index],
             )
             filename = posterior_filename(data, index, source_kind)
             output_path = OUTPUT_DIRECTORY / filename

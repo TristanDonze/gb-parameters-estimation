@@ -331,7 +331,7 @@ def main():
             source_reconstructed = h5_file["source_reconstructed"][index]
             target_real = source_real + h5_file["residual_real"][index]
             target_reconstructed = (
-                source_reconstructed + h5_file["residual_reconstructed"][index]
+                source_reconstructed + h5_file["residual_real"][index]
             )
             source_overlap, source_delta_norm = waveform_metrics(
                 source_real, source_reconstructed
