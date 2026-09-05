@@ -9,4 +9,7 @@ wheels/
 # Virtual environments
 .venv
 
-posteriors/
+# MAC OS : 
+.DS_Store
+
+posterior*/
