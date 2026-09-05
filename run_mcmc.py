@@ -254,43 +254,49 @@ def posterior_filename(data, index, source_kind):
     return f"posteriors_snr_{level}_quality_{quality}_{source_kind}.npz"
 
 
+def run_and_save_posterior(data, index, source_kind):
+    """Run and save one posterior, for sequential or parallel execution."""
+    truth, phi0, psi = source_parameters(data, index)
+    target_a, target_e = make_target(
+        data[f"source_{source_kind}"][index],
+        data["residual_real"][index],
+    )
+    output_path = OUTPUT_DIRECTORY / posterior_filename(
+        data, index, source_kind
+    )
+
+    chain, log_likelihood = run_one_mcmc(
+        target_a, target_e, truth, phi0, psi
+    )
+    posterior = chain.reshape(-1, len(PARAMETER_NAMES))
+    np.savez_compressed(
+        output_path,
+        posterior=posterior,
+        chain=chain,
+        log_likelihood=log_likelihood,
+        truth=truth,
+        parameter_names=np.asarray(PARAMETER_NAMES),
+        element_index=int(data["element_index"][index]),
+        source_number=int(data["source_number"][index]),
+        source_kind=source_kind,
+        burn_in=BURN_IN,
+        n_iter=N_ITER,
+        n_walkers=N_WALKERS,
+    )
+    return output_path, posterior.shape
+
+
 def main():
     data = load_input(INPUT_FILE)
     OUTPUT_DIRECTORY.mkdir(parents=True, exist_ok=True)
 
     for index in range(N_SOURCES):
-        truth, phi0, psi = source_parameters(data, index)
-
         for source_kind in ("real", "reconstructed"):
-            target_a, target_e = make_target(
-                data[f"source_{source_kind}"][index],
-                data[f"residual_real"][index],
-            )
-            filename = posterior_filename(data, index, source_kind)
-            output_path = OUTPUT_DIRECTORY / filename
-
             print(f"Running posterior {index + 1}/{N_SOURCES}: {source_kind}")
-            chain, log_likelihood = run_one_mcmc(
-                target_a, target_e, truth, phi0, psi
+            output_path, shape = run_and_save_posterior(
+                data, index, source_kind
             )
-            posterior = chain.reshape(-1, len(PARAMETER_NAMES))
-            np.savez_compressed(
-                output_path,
-                posterior=posterior,
-                chain=chain,
-                log_likelihood=log_likelihood,
-                truth=truth,
-                parameter_names=np.asarray(PARAMETER_NAMES),
-                element_index=int(data["element_index"][index]),
-                source_number=int(data["source_number"][index]),
-                source_kind=source_kind,
-                burn_in=BURN_IN,
-                n_iter=N_ITER,
-                n_walkers=N_WALKERS,
-            )
-            print(
-                f"Saved {output_path} with posterior shape {posterior.shape}"
-            )
+            print(f"Saved {output_path} with posterior shape {shape}")
 
 
 if __name__ == "__main__":
