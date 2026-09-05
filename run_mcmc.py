@@ -14,7 +14,7 @@ from noise import AnalyticNoise
 
 
 INPUT_FILE = Path("reconstructed_waveform.h5")
-OUTPUT_DIRECTORY = Path("./posteriors")
+OUTPUT_DIRECTORY = Path("./posterior")
 
 N_SOURCES = 9
 N_FREQUENCY_BINS = 128
@@ -218,8 +218,10 @@ def load_input(path):
         "lam",
         "phi0",
         "psi",
+        "reconstruction_quality",
         "residual_real",
         "residual_reconstructed",
+        "snr",
         "source_number",
         "source_real",
         "source_reconstructed",
@@ -234,13 +236,22 @@ def load_input(path):
     return data
 
 
+def snr_level(snr):
+    """Map an SNR to the requested low, medium, or high category."""
+    if 10.0 <= snr < 30.0:
+        return "low"
+    if 30.0 <= snr < 50.0:
+        return "medium"
+    if 50.0 <= snr <= 100.0:
+        return "high"
+    raise ValueError(f"SNR {snr} is outside the supported [10, 100] range.")
+
+
 def posterior_filename(data, index, source_kind):
     """Build the explicit output name requested for one posterior."""
-    element = int(data["element_index"][index])
-    source = int(data["source_number"][index])
-    return (
-        f"posterior_element_{element}_waveform_{source}_{source_kind}.npz"
-    )
+    level = snr_level(float(data["snr"][index]))
+    quality = int(data["reconstruction_quality"][index])
+    return f"posteriors_snr_{level}_quality_{quality}_{source_kind}.npz"
 
 
 def main():
