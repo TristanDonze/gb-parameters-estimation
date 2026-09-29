@@ -14,7 +14,7 @@ from noise import AnalyticNoise
 
 
 INPUT_FILE = Path("reconstructed_waveform.h5")
-OUTPUT_DIRECTORY = Path("./posterior")
+OUTPUT_DIRECTORY = Path("./posteriors")
 
 N_SOURCES = 9
 N_FREQUENCY_BINS = 128
@@ -207,11 +207,10 @@ def run_one_mcmc(target_a, target_e, truth, phi0, psi):
 
 
 def load_input(path):
-    """Load the HDF5 datasets needed by the 18 MCMC runs."""
+    """Load either supported HDF5 layout for the 18 MCMC runs."""
     keys = (
         "amp",
         "beta",
-        "element_index",
         "f0",
         "fdot",
         "iota",
@@ -228,6 +227,14 @@ def load_input(path):
     )
     with h5py.File(path, "r") as input_file:
         data = {key: input_file[key][:] for key in keys}
+        if "element_index" in input_file:
+            data["element_index"] = input_file["element_index"][:]
+        elif "mixture_index" in input_file:
+            data["element_index"] = input_file["mixture_index"][:]
+        else:
+            raise KeyError(
+                "The HDF5 file must contain 'element_index' or 'mixture_index'."
+            )
 
     if len(data["element_index"]) != N_SOURCES:
         raise ValueError(
@@ -259,7 +266,7 @@ def run_and_save_posterior(data, index, source_kind):
     truth, phi0, psi = source_parameters(data, index)
     target_a, target_e = make_target(
         data[f"source_{source_kind}"][index],
-        data["residual_real"][index],
+        data[f"residual_{source_kind}"][index],
     )
     output_path = OUTPUT_DIRECTORY / posterior_filename(
         data, index, source_kind
